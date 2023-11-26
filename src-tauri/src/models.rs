@@ -1,4 +1,8 @@
+use select::document::Document;
 use serde::ser::{Serialize, Serializer};
+use chrono::{self, DateTime, Duration, Utc, ParseError, FixedOffset, NaiveDate};
+
+use crate::database::add_manga_to_favorites;
 
 pub const BASE: &str = "https://mangafire.to";
 pub const FILTER: &str = "https://mangafire.to/filter?keyword=";
@@ -148,6 +152,26 @@ impl Chapter
         return chapter
 
     }
+
+    pub fn parse_date(date_str: &String) -> DateTime<Utc>
+    {
+        if let Some(seconds) = date_str.strip_suffix(" seconds ago") 
+        {
+            let seconds = seconds.parse::<i64>().unwrap_or(0);
+            Utc::now() - Duration::seconds(seconds)
+        }
+        else if let Some(hours) = date_str.strip_suffix(" hours ago") 
+        {
+            let hours = hours.parse::<i64>().unwrap_or(0);
+            Utc::now() - Duration::hours(hours)
+        }
+        else 
+        {
+            NaiveDate::parse_from_str(date_str.to_string().as_str(), "%b %d, %Y")
+                .map(|d| DateTime::<Utc>::from_naive_utc_and_offset(d.and_hms_opt(0, 0, 0).unwrap(), Utc))
+                .unwrap_or_else(|_| Utc::now())
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -155,12 +179,12 @@ impl Chapter
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Manga
 {
+    pub id: Option<u64>,
     pub title: String,
     pub manga_type: Option<MangaTypes>,
     pub chapters: Option<Vec<Chapter>>,
     pub href: String,
     pub poster: Option<String>,
-    pub latest_chapter: String,
     pub favorited: bool,
 
 }
@@ -184,64 +208,76 @@ impl Manga
         return false
     }
 
-    pub fn get_manga(element: select::node::Node) -> Manga
+    pub fn get_manga(document: Document, url: String, id: u64) -> Self
     {
         use select::predicate::{Name, Class};
 
-        let manga_type = element.text(); // get manga type
+        let mut manga_type = String::new(); // get manga type
         let mut title = String::new(); // manga title
-        let mut href: String = String::new(); // manga page link
+        let mut poster: String = String::new();
 
         let mut chapters: Vec<Chapter> = Vec::new(); // chapters of the manga
+        let mut latest_chapter: String = String::new();
 
-        // iterate over info class parent element and find all <a> tags
-        for title_element in element.find(Name("a"))
+        // get title in <h1> 
+        for element in document.find(Name("h1"))
         {
-            // get manga title and link to manga page
-            if title_element.parent().unwrap().name() != Some("li")
-            {
-                title = title_element.text();
-                href = title_element.attr("href").unwrap().to_string();
+            title = element.text();
 
+        }
+
+        for type_element in document.find(Class("min-info")).take(1)
+        {
+            manga_type = type_element.text().trim().split_once(" ").unwrap().0.to_string()
+
+        }
+
+        for image in document.find(Name("img"))
+        {
+            if image.attr("itemprop") == Some("image")
+            {
+                poster = image.attr("src").unwrap().to_string()
             }
         }
 
-        // content refers to chapters or volumes if applicable
-        for content in element.find(Class("content"))
+        // get the first three chapters
+        for item in document.find(Class("item")).take(3)
         {
-            // go over parents attributes
-            for attr in content.attrs()
+            let chapter = item.text();
+            let chapter: Vec<&str> = chapter.trim().split(" ").collect();
+            let mut chapter_link: String = String::new();
+
+            let chapter_number = chapter[1].split(":").next().unwrap();
+            let date = chapter[&chapter.len() - 3..].join(" ");
+
+            if latest_chapter.is_empty() { latest_chapter = chapter_number.to_string() }
+            
+            for link in item.find(Name("a"))
             {
-                // if attribute is chapter get chapter
-                if attr.1 == "chap"
-                {
-                    
-                    let attributes = content.text();
-                    let parts: Vec<&str> = attributes.trim().split("     ").collect();
-                    
-                    for part in parts
-                    {
-                        // chapters.push(Chapter::get_chapter(part))
-
-                    }
-
-                }
-                // else if attr.1 == "vol" {}
+                chapter_link = link.attr("href").unwrap().to_string()
             }
+
+            let chapter: Chapter = Chapter
+            {
+                chapter_number: chapter_number.to_string(),
+                chapter_link: chapter_link,
+                date: date,
+                language: String::from("EN")
+            };
+
+            chapters.push(chapter)
+
         }
         
-        
-        let manga: Manga = Manga
-        {
+        return Self {
+            id: Some(id),
             title: title,
-            href: href,
-            chapters: Some(chapters.clone()),
-            poster: None,
-            manga_type: None,
-            latest_chapter: chapters[0].chapter_number.clone(),
+            href: url,
+            chapters: Some(chapters),
+            poster: Some(poster),
+            manga_type: MangaTypes::from_string_type(&manga_type),
             favorited: false
         };
 
-        return manga
     }
 }

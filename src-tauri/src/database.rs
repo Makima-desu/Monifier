@@ -26,12 +26,12 @@ pub fn get_manga_list() -> Vec<models::Manga>
     {
         Ok(models::Manga
         {
+            id: row.get(0)?,
             title: row.get(1)?,
             chapters: None,
             href: row.get(2)?,
             poster: None,
             manga_type: None,
-            latest_chapter: row.get(3)?,
             favorited: true,
         })
     });
@@ -55,4 +55,13 @@ pub async fn add_manga_to_favorites(manga: models::Manga)
     let latest_chapter = scraper::get_latest_chapter(&manga.href).await;
 
     let _ = conn.execute("insert into favorites (title, href, latest_chapter) values (?1, ?2, ?3)", [&manga.title, &manga.href, &latest_chapter]).unwrap();
+}
+
+#[tauri::command]
+pub fn remove_from_favorites(id: u64)
+{
+    let conn = Connection::open(DB_PATH).unwrap();
+
+    let _ = conn.execute("DELETE from favorites where id = ?", [&id]).unwrap();
+
 }

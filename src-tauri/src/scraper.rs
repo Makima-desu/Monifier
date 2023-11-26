@@ -6,7 +6,7 @@ use select::{self, document::Document, predicate::{Class, Name}};
 use crate::models;
 use crate::database;
 
-#[tauri::command]
+#[tauri::command] // access the filter address and get the results by keyword
 pub async fn search_manga(keywords: Vec<String>) -> Option<Vec<models::Manga>>
 {
     let mut mangas: Vec<models::Manga> = Vec::new();
@@ -81,13 +81,13 @@ pub async fn search_manga(keywords: Vec<String>) -> Option<Vec<models::Manga>>
             }
 
             let manga: models::Manga = models::Manga
-            {
+            {   
+                id: None,
                 title: title.clone(),
                 chapters: Some(chapters.clone()),
                 href: href.clone(),
                 manga_type: models::MangaTypes::from_string_type(&manga_type),
                 poster: Some(poster),
-                latest_chapter: String::new(),
                 favorited: models::Manga::is_favorited(title)
             };
 
@@ -95,9 +95,11 @@ pub async fn search_manga(keywords: Vec<String>) -> Option<Vec<models::Manga>>
         }
     }
 
+
     return Some(mangas)
 }
 
+// access the manga page and take the first chapter which will be used as latest
 pub async fn get_latest_chapter(href: &String) -> String
 {
     let client = Client::new();
@@ -128,47 +130,38 @@ pub async fn get_latest_chapter(href: &String) -> String
 #[tauri::command]
 pub async fn check_update_manga_list() -> Option<Vec<models::Manga>>
 {
+    use chrono;
+
     let manga_list = database::get_manga_list();
     let mut mangas: Vec<models::Manga> = Vec::new();
 
     let client = reqwest::Client::new();
 
-    for mut manga in manga_list
+    for manga_item in manga_list
     {
-        let response = client.get(manga.href.clone()).send().await.unwrap();
+        let response = client.get(format!("{}{}", models::BASE, manga_item.href.clone())).send().await.unwrap();
 
         if response.status().is_success()
         {
             let body = response.text().await.unwrap();
 
             let document = Document::from_read(body.as_bytes()).unwrap();
+            
+            let manga: models::Manga = models::Manga::get_manga(document, manga_item.href, manga_item.id.unwrap());
 
-            for element in document.find(Class("item")).take(1)
-            {
-                let chapter = element.text();
-                let chapter: Vec<&str> = chapter.trim().split(" ").collect();
-
-                // let date = chapter[3..].join(" ");
-                let chapter_number = chapter[1].split(":").next().unwrap();
-                let latest_chapter = manga.latest_chapter.parse::<u32>().unwrap();
-                
-                if manga.latest_chapter.is_empty()
-                {
-                    manga.latest_chapter = chapter_number.to_string();
-                    database::add_manga_to_favorites(manga.clone());
-                    mangas.push(manga.clone())
-                }
-                else if chapter_number.parse::<u32>().unwrap() > latest_chapter
-                {
-                    mangas.push(manga.clone())
-                }
-            }
+            mangas.push(manga)
         }
     }
 
+    mangas.sort_by(|a, b| 
+    {
+        let date_a = a.chapters.as_ref().unwrap().first().map(|ch| models::Chapter::parse_date(&ch.date)).unwrap_or(chrono::Utc::now());
+        let date_b = b.chapters.as_ref().unwrap().first().map(|ch| models::Chapter::parse_date(&ch.date)).unwrap_or(chrono::Utc::now());
+        date_b.cmp(&date_a) // Note: cmp for reverse order (most recent first)
+    });
+
     return Some(mangas)
 }
-
 #[tauri::command]
 pub async fn get_recently_updated_manga(page_number: u32, manga_type: Option<models::MangaTypes>, genres: Option<Vec<models::Genres>>) -> Vec<models::Manga>
 {
@@ -183,11 +176,11 @@ pub async fn get_recently_updated_manga(page_number: u32, manga_type: Option<mod
 
         let document = Document::from_read(body.as_bytes()).unwrap();
 
-        for element in document.find(Class("info"))
-        {
-            mangas.push(models::Manga::get_manga(element));
+        // for element in document.find(Class("info"))
+        // {
+        //     mangas.push(models::Manga::get_manga(document));
 
-        }
+        // }
     }
 
     for manga in mangas
