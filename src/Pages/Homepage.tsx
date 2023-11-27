@@ -4,7 +4,7 @@ import { invoke } from "@tauri-apps/api"
 
 import Topbar from "../Components/Topbar"
 import { A } from "@solidjs/router"
-import { open } from "@tauri-apps/api/shell"
+// import { open } from "@tauri-apps/api/shell"
 
 function Homepage()
 {

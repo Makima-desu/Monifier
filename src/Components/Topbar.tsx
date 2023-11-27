@@ -1,6 +1,6 @@
-import { invoke } from "@tauri-apps/api/tauri"
+// import { invoke } from "@tauri-apps/api/tauri"
 import { appWindow } from "@tauri-apps/api/window"
-import { createSignal } from "solid-js"
+// import { createSignal } from "solid-js"
 
 
 
@@ -30,7 +30,7 @@ function Topbar(props: any)
                 </div>
                 <div class="w-8 h-8 hover:bg-[#4A90E2]/50 p-2 transition-all ease-linear rounded-md" onClick={async () => await appWindow.toggleMaximize()}>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill="currentColor" d="M4.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3h-7Zm0 1h7a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-7a.5.5 0 0 1 .5-.5Z"/></svg></div>
-                <div class="w-8 h-8 hover:bg-[#E1BEE7]/50 p-2 transition-all ease-linear rounded-md" onClick={async () => appWindow.hide()}>
+                <div class="w-8 h-8 hover:bg-[#E1BEE7]/50 p-2 transition-all ease-linear rounded-md" onClick={async () => appWindow.close()}>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M18.3 5.71a.996.996 0 0 0-1.41 0L12 10.59L7.11 5.7A.996.996 0 1 0 5.7 7.11L10.59 12L5.7 16.89a.996.996 0 1 0 1.41 1.41L12 13.41l4.89 4.89a.996.996 0 1 0 1.41-1.41L13.41 12l4.89-4.89c.38-.38.38-1.02 0-1.4z"/></svg>
                 </div>
             </div>

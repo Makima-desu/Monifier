@@ -14,7 +14,6 @@ fn main()
         .invoke_handler(tauri::generate_handler![
             scraper::search_manga,
             scraper::check_update_manga_list,
-            scraper::get_recently_updated_manga,
             database::add_manga_to_favorites,
             database::remove_from_favorites,
         ])

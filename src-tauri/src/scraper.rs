@@ -1,6 +1,5 @@
 // scraper for searching mangas
 
-use reqwest::{self, Client};
 use select::{self, document::Document, predicate::{Class, Name}};
 
 use crate::models;
@@ -100,32 +99,32 @@ pub async fn search_manga(keywords: Vec<String>) -> Option<Vec<models::Manga>>
 }
 
 // access the manga page and take the first chapter which will be used as latest
-pub async fn get_latest_chapter(href: &String) -> String
-{
-    let client = Client::new();
+// pub async fn get_latest_chapter(href: &String) -> String
+// {
+//     let client = Client::new();
     
-    let mut chapter_number: String = String::new();
-    let response = client.get(format!("{}{}", models::BASE, href)).send().await.unwrap();
+//     let mut chapter_number: String = String::new();
+//     let response = client.get(format!("{}{}", models::BASE, href)).send().await.unwrap();
 
-    if response.status().is_success()
-    {
-        let body = response.text().await.unwrap();
+//     if response.status().is_success()
+//     {
+//         let body = response.text().await.unwrap();
 
-        let document = Document::from_read(body.as_bytes()).unwrap();
+//         let document = Document::from_read(body.as_bytes()).unwrap();
 
-        for element in document.find(Class("item")).take(1)
-        {
-            let chapter = element.text();
-            let chapter: Vec<&str> = chapter.trim().split(" ").collect();
+//         for element in document.find(Class("item")).take(1)
+//         {
+//             let chapter = element.text();
+//             let chapter: Vec<&str> = chapter.trim().split(" ").collect();
 
-            // let date = chapter[3..].join(" ");
-            chapter_number = chapter[1].split(":").next().unwrap().to_string();
+//             // let date = chapter[3..].join(" ");
+//             chapter_number = chapter[1].split(":").next().unwrap().to_string();
             
-        }
-    }
+//         }
+//     }
 
-    return chapter_number
-}
+//     return chapter_number
+// }
 
 #[tauri::command]
 pub async fn check_update_manga_list() -> Option<Vec<models::Manga>>
@@ -162,34 +161,3 @@ pub async fn check_update_manga_list() -> Option<Vec<models::Manga>>
 
     return Some(mangas)
 }
-#[tauri::command]
-pub async fn get_recently_updated_manga(page_number: u32, manga_type: Option<models::MangaTypes>, genres: Option<Vec<models::Genres>>) -> Vec<models::Manga>
-{
-    let client = reqwest::Client::new();
-    let response = client.get(format!("{}{}", models::UPDATES, page_number)).send().await.unwrap();
-
-    let mut mangas: Vec<models::Manga> = vec![];
-
-    if response.status().is_success()
-    {
-        let body = response.text().await.unwrap();
-
-        let document = Document::from_read(body.as_bytes()).unwrap();
-
-        // for element in document.find(Class("info"))
-        // {
-        //     mangas.push(models::Manga::get_manga(document));
-
-        // }
-    }
-
-    for manga in mangas
-    {
-        println!("{:#?}", manga)
-    }
-
-    return Vec::new();
-}
-
-// search genres / genre
-// search author

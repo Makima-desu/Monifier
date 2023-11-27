@@ -1,13 +1,11 @@
 use select::document::Document;
 use serde::ser::{Serialize, Serializer};
-use chrono::{self, DateTime, Duration, Utc, ParseError, FixedOffset, NaiveDate};
-
-use crate::database::add_manga_to_favorites;
+use chrono::{self, DateTime, Duration, Utc, NaiveDate};
 
 pub const BASE: &str = "https://mangafire.to";
 pub const FILTER: &str = "https://mangafire.to/filter?keyword=";
-pub const UPDATES: &str = "https://mangafire.to/updated?page=";
-pub const RANDOM: &str = "https://mangafire.to/random";
+pub const _UPDATES: &str = "https://mangafire.to/updated?page=";
+pub const _RANDOM: &str = "https://mangafire.to/random";
 
 // error catching
 #[derive(Debug, thiserror::Error)]
@@ -32,7 +30,7 @@ impl Serialize for CommandError
 
 }
 
-pub type CommandResult<T, E = CommandError> = anyhow::Result<T, E>;
+pub type _CommandResult<T, E = CommandError> = anyhow::Result<T, E>;
 
 #[derive(Debug, Clone)]
 #[derive(Eq, Hash, PartialEq)]

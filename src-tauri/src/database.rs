@@ -49,12 +49,9 @@ pub fn get_manga_list() -> Vec<models::Manga>
 #[tauri::command]
 pub async fn add_manga_to_favorites(manga: models::Manga)
 {
-    use crate::scraper;
     let conn = Connection::open(DB_PATH).unwrap();
 
-    let latest_chapter = scraper::get_latest_chapter(&manga.href).await;
-
-    let _ = conn.execute("insert into favorites (title, href, latest_chapter) values (?1, ?2, ?3)", [&manga.title, &manga.href, &latest_chapter]).unwrap();
+    let _ = conn.execute("insert into favorites (title, href) values (?1, ?2)", [&manga.title, &manga.href]).unwrap();
 }
 
 #[tauri::command]
