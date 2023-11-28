@@ -1,10 +1,10 @@
 [package]
-name = "mangafire-scraper"
+name = "monifier"
 version = "0.0.0"
 description = "A Tauri App"
-authors = ["you"]
+authors = ["makima-desu"]
 license = ""
-repository = ""
+repository = "https://github.com/Makima-desu/Monifier"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

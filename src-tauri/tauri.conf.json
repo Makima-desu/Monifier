@@ -7,7 +7,7 @@
       "withGlobalTauri": false
     },
     "package": {
-      "productName": "all-in-one-place",
+      "productName": "monifier",
       "version": "0.0.0"
     },
     "tauri": {
