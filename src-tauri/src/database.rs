@@ -16,11 +16,12 @@ pub fn create_database() -> Result<(), rusqlite::Error>
     Ok(())
 }
 
-pub fn get_manga_list() -> Vec<models::Manga>
+//
+pub fn get_favorite_mangas() -> Result<Vec<models::Manga>, rusqlite::Error>
 {
-    let conn = Connection::open(DB_PATH).unwrap();
+    let conn = Connection::open(DB_PATH)?;
 
-    let mut statement = conn.prepare("select * from favorites").unwrap();
+    let mut statement = conn.prepare("select * from favorites")?;
 
     let mangas = statement.query_map([], |row|
     {
@@ -43,7 +44,7 @@ pub fn get_manga_list() -> Vec<models::Manga>
         mangas_vec.push(manga.unwrap())
     }
 
-    return mangas_vec
+    return Ok(mangas_vec)
 }
 
 #[tauri::command]

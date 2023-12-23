@@ -189,21 +189,21 @@ pub struct Manga
 
 impl Manga
 {
-    pub fn is_favorited(title: String) -> bool
+    pub fn is_favorited(title: String) -> Result<bool, rusqlite::Error>
     {
         use crate::database;
 
-        let mangas: Vec<Manga> = database::get_manga_list();
+        let mangas: Vec<Manga> = database::get_favorite_mangas()?;
 
         for manga in mangas
         {
             if manga.title == title
             {
-                return true
+                return Ok(true)
             }
         }
 
-        return false
+        return Ok(false)
     }
 
     pub fn get_manga(document: Document, url: String, id: u64) -> Self

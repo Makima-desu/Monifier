@@ -1,6 +1,5 @@
-// scraper for searching mangas
-
 use select::{self, document::Document, predicate::{Class, Name}};
+use futures::stream::{self, StreamExt};
 
 use crate::models;
 use crate::database;
@@ -87,7 +86,7 @@ pub async fn search_manga(keywords: Vec<String>) -> Option<Vec<models::Manga>>
                 href: href.clone(),
                 manga_type: models::MangaTypes::from_string_type(&manga_type),
                 poster: Some(poster),
-                favorited: models::Manga::is_favorited(title)
+                favorited: models::Manga::is_favorited(title).unwrap()
             };
 
             mangas.push(manga)
@@ -127,37 +126,42 @@ pub async fn search_manga(keywords: Vec<String>) -> Option<Vec<models::Manga>>
 // }
 
 #[tauri::command]
-pub async fn check_update_manga_list() -> Option<Vec<models::Manga>>
+pub async fn check_favorite_manga_parallel() -> Option<Vec<models::Manga>>
 {
-    use chrono;
-
-    let manga_list = database::get_manga_list();
-    let mut mangas: Vec<models::Manga> = Vec::new();
-
     let client = reqwest::Client::new();
+    let manga_list = database::get_favorite_mangas();
 
-    for manga_item in manga_list
+    let mut mangas: Vec<models::Manga> = stream::iter(manga_list.unwrap())
+    .map(|manga_item| 
     {
-        let response = client.get(format!("{}{}", models::BASE, manga_item.href.clone())).send().await.unwrap();
-
-        if response.status().is_success()
+        let client = &client;
+        async move 
         {
-            let body = response.text().await.unwrap();
+            let response = client.get(format!("{}{}", models::BASE, manga_item.href.clone())).send().await.unwrap();
 
-            let document = Document::from_read(body.as_bytes()).unwrap();
-            
-            let manga: models::Manga = models::Manga::get_manga(document, manga_item.href, manga_item.id.unwrap());
+            if response.status().is_success() 
+            {
+                if let Ok(body) = response.text().await 
+                {
+                    let document = Document::from_read(body.as_bytes()).ok();
+                    return document.map(|doc| models::Manga::get_manga(doc, manga_item.href, manga_item.id.unwrap()));
+                }
+            }
 
-            mangas.push(manga)
+            return None
         }
-    }
+    })
+    .buffer_unordered(10) // Adjust the concurrency level as needed
+    .filter_map(|x| async { x })
+    .collect().await;
 
+    // sort mangas by last updated
     mangas.sort_by(|a, b| 
-    {
-        let date_a = a.chapters.as_ref().unwrap().first().map(|ch| models::Chapter::parse_date(&ch.date)).unwrap_or(chrono::Utc::now());
-        let date_b = b.chapters.as_ref().unwrap().first().map(|ch| models::Chapter::parse_date(&ch.date)).unwrap_or(chrono::Utc::now());
-        date_b.cmp(&date_a) // Note: cmp for reverse order (most recent first)
-    });
+        {
+            let date_a = a.chapters.as_ref().unwrap().first().map(|ch| models::Chapter::parse_date(&ch.date)).unwrap_or(chrono::Utc::now());
+            let date_b = b.chapters.as_ref().unwrap().first().map(|ch| models::Chapter::parse_date(&ch.date)).unwrap_or(chrono::Utc::now());
+            date_b.cmp(&date_a) // Note: cmp for reverse order (most recent first)
+        });
 
     return Some(mangas)
 }

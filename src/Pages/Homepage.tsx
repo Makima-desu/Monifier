@@ -12,7 +12,7 @@ function Homepage()
     const [keywords, setKeywords] = createSignal<string[]>([])
     const [search, setSearch] = createSignal<boolean>(false)
 
-    invoke("check_update_manga_list").then((response: any) =>
+    invoke("check_favorite_manga_parallel").then((response: any) =>
     {
         setMangas(response)
     })
