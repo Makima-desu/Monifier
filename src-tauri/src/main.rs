@@ -2,8 +2,6 @@
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use crate::scraper::check_update_manga_list;
-
 mod scraper;
 mod database;
 mod models;
